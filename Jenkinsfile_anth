@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "tott1111/jobfinder-main-anth"
-        SERVER_IP = "52.78.3.125"
-        APP_DIR = "/home/ubuntu/jobfinder"
+        DOCKER_IMAGE = "your-dockerhub-id/jobfinder-main"
+        SERVER_IP = "your-server-ip"
+        APP_DIR = "/home/ubuntu/your-app-dir"
     }
 
     tools {
@@ -25,16 +25,6 @@ pipeline {
                 sh './gradlew clean build -x test'
             }
         }
-        
-        /*
-        stage('SonarQube Analysis') {
-		    steps {
-		        withSonarQubeEnv('sonarqube') {
-				    sh './gradlew sonar --stacktrace --info'
-				}
-		    }
-		}
-		*/
 
         stage('Docker Build & Push') {
             steps {
@@ -51,8 +41,7 @@ pipeline {
                 }
             }
         }
-        
-		/*
+
         stage('Deploy Main Service') {
             steps {
                 sshagent(['SERVER_SSH_KEY']) {
@@ -66,24 +55,6 @@ pipeline {
                 }
             }
         }
-        */
-        
-        stage('Deploy Main Service') {
-		    steps {
-		        sshagent(['SERVER_SSH_KEY']) {
-		            sh """
-		                ssh -v -o StrictHostKeyChecking=no ubuntu@$SERVER_IP '
-		                    echo "connected"
-		                    cd $APP_DIR
-		                    pwd
-		                    docker compose pull main-service
-		                    docker compose up -d --no-deps main-service
-		                '
-		            """
-		        }
-		    }
-		}
-        
     }
 
     post {
