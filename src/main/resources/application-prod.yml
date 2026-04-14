@@ -1,0 +1,31 @@
+# 운영 환경용 설정 (Public Portfolio Version)
+# 실제 운영 서버 정보 및 민감 설정은 환경변수로 관리합니다.
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource-myspringbootuser:
+    driver-class-name: oracle.jdbc.OracleDriver
+    jdbcUrl: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 10
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:/app/data/file_upload}
+  photoupload-dir: ${FILE_PHOTOUPLOAD_DIR:/app/data/file_photoupload}
+  emailattachfile-dir: ${FILE_EMAILATTACHFILE_DIR:/app/data/file_emailattachfile}
+  images-dir: ${FILE_IMAGES_DIR:/app/data/file_images}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://discovery-service:8761/eureka/}

@@ -1,0 +1,203 @@
+<!--/* Fragment 코드 */-->
+<header xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+        th:fragment="main_header"
+        class="jp-header">
+
+<script>
+  const gatewayOrigin = window.location.origin;
+  const userServiceBase = gatewayOrigin + '/user-service';
+  const boardServiceBase = gatewayOrigin + '/board-service';
+
+  function moveAfterRead(event, notiId, url) {
+    event.preventDefault();
+    fetch(userServiceBase + '/notification/api/read/' + notiId, {
+      method: 'POST',
+      credentials: 'include'
+    })
+    .catch(() => {})
+    .finally(() => {
+      const badge = document.getElementById("notificationBadge");
+      if (badge) {
+        let count = parseInt(badge.innerText);
+        if (count > 1) badge.innerText = count - 1;
+        else badge.style.display = "none";
+      }
+
+      if (url.startsWith('/board-service/')) {
+        window.location.href = gatewayOrigin + url;
+      } else if (url.startsWith('/community')) {
+        window.location.href = boardServiceBase + url;
+      } else {
+        window.location.href = userServiceBase + url;
+      }
+    });
+    return false;
+  }
+
+  function handleLogout() {
+    if (window.JPAuth && typeof window.JPAuth.clearAccessToken === 'function') {
+      window.JPAuth.clearAccessToken();
+    }
+
+    localStorage.removeItem('loginUser');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+
+    return true;
+  }
+</script>
+
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container-fluid jp-container">
+
+      <a class="navbar-brand d-flex align-items-center jp-brand" href="/user-service/index">
+        <span class="jp-brand__icon">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
+        <span class="jp-brand__text">잡파인더</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#jpNav"
+              aria-controls="jpNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="jpNav">
+        <ul class="navbar-nav mr-auto jp-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="/user-service/job/list">채용정보</a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" href="/user-service/companyinfo/list">기업정보</a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" href="/board-service/community">커뮤니티</a>
+          </li>
+<!--
+          <li class="nav-item">
+            <a class="nav-link"
+               href="/board-service/community"
+               onclick="return window.JPAuth && typeof window.JPAuth.moveWithAuthCheck === 'function'
+                 ? window.JPAuth.moveWithAuthCheck(event, '/board-service/community', '/user-service/auth/check')
+                 : true;">커뮤니티</a>
+          </li>
+-->
+          <li class="nav-item">
+            <a class="nav-link" href="/user-service/notice">공지사항</a>
+          </li>
+        </ul>
+
+        <div class="d-flex align-items-center jp-auth">
+
+          <!-- 로그인 전 -->
+          <th:block sec:authorize="isAnonymous()">
+            <div class="ml-3 pl-3 border-left" style="border-color:#e5e7eb !important;">
+              <a class="jp-auth__link" href="/user-service/member/login">MSA 로그인</a>
+              <a class="jp-auth__link ml-2" href="/user-service/member/registerMember">MSA 회원가입</a>
+            </div>
+          </th:block>
+
+          <!-- 로그인 후 -->
+          <th:block sec:authorize="isAuthenticated()">
+
+            <!-- 로그인한 아이디 + 알림 드롭다운 -->
+            <div class="dropdown mr-3" th:if="${notificationList != null}">
+              <button class="btn btn-link p-0 text-decoration-none dropdown-toggle"
+                      type="button"
+                      id="notificationDropdown"
+                      data-toggle="dropdown"
+                      aria-haspopup="true"
+                      aria-expanded="false"
+                      style="color:#6b7280; font-size:13px;">
+                <b class="jp-brand__text" sec:authentication="name"></b> 님
+                <span id="notificationBadge"
+                      class="badge badge-danger ml-1"
+                      th:if="${unreadNotificationCount > 0}"
+                      th:text="${unreadNotificationCount}"
+                      style="font-size:11px;">
+                  0
+                </span>
+              </button>
+
+              <div class="dropdown-menu dropdown-menu-right p-0"
+                   aria-labelledby="notificationDropdown"
+                   style="min-width:360px; max-width:360px; border-radius:12px; overflow:hidden;">
+                <div class="px-3 py-2 font-weight-bold border-bottom">
+                  알림
+                </div>
+
+                <div class="jp-notification-list" style="max-height:420px; overflow-y:auto;">
+
+                  <div th:if="${#lists.isEmpty(notificationList)}"
+                       class="px-3 py-3 text-muted"
+                       style="font-size:13px;">
+                    알림이 없습니다.
+                  </div>
+
+                  <a th:each="noti : ${notificationList}"
+                     href="javascript:void(0)"
+                     th:attr="data-noti-id=${noti.notiId}, data-url=${noti.linkUrl}"
+                     onclick="return moveAfterRead(event, this.dataset.notiId, this.dataset.url)"
+                     th:class="'dropdown-item px-3 py-3 border-bottom ' + (${noti.isRead} == 1 ? 'text-muted bg-light' : '')"
+                     style="white-space:normal; line-height:1.5;">
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                      <div style="font-weight:600; font-size:14px; color:#111827;"
+                           th:text="${noti.title}">
+                        알림 제목
+                      </div>
+
+                      <span th:if="${noti.isRead == 0}"
+                            class="badge badge-danger"
+                            style="font-size:10px;">
+                        NEW
+                      </span>
+                    </div>
+
+                    <div style="font-size:12px; color:#6b7280; white-space:pre-wrap;"
+                         th:text="${noti.message}">
+                      알림 내용
+                    </div>
+                  </a>
+
+                </div>
+              </div>
+            </div>
+
+            <div class="mr-3 text-muted"
+                 style="font-size:13px;"
+                 th:if="${notificationList == null}">
+              <b class="jp-brand__text" sec:authentication="name"></b> 님
+            </div>
+
+            <!-- 관리자 -->
+            <th:block sec:authorize="hasRole('ADMIN')">
+              <a class="jp-auth__link" href="/user-service/admin/admin_dashboard">관리자</a>
+            </th:block>
+
+            <!-- 기업 -->
+            <th:block sec:authorize="hasRole('COMPANY')">
+              <a class="jp-auth__link" href="/user-service/company/company_dashboard">기업페이지</a>
+            </th:block>
+
+            <!-- 개인 -->
+            <th:block sec:authorize="hasRole('MEMBER')">
+              <a class="jp-auth__link" href="/user-service/jobseeker/dashboard">마이페이지</a>
+            </th:block>
+
+            <!-- 로그아웃 -->
+            <div class="ml-2">
+              <form action="/user-service/security/logout" method="post" class="m-0" onsubmit="return handleLogout();">
+                <button type="submit" class="jp-auth__link btn btn-link p-0">MSA 로그아웃</button>
+              </form>
+            </div>
+          </th:block>
+
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>

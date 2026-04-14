@@ -1,0 +1,172 @@
+<!--/* Fragment 코드 - 기업 측 디자인 통일 */-->
+<div xmlns:th="http://www.thymeleaf.org"
+     th:fragment="admin_layout(content)"
+     class="admin-wrapper">
+     
+     <script>
+  const adminGatewayOrigin = window.location.origin;
+  const adminUserServiceBase = adminGatewayOrigin + '/user-service';
+  const adminBoardServiceBase = adminGatewayOrigin + '/board-service';
+
+  function adminMoveAfterRead(event, notiId, url) {
+    event.preventDefault();
+
+    fetch(adminUserServiceBase + '/notification/api/read/' + notiId, {
+      method: 'POST',
+      credentials: 'include'
+    })
+    .catch(() => {})
+    .finally(() => {
+      const badge = document.getElementById("adminNotificationBadge");
+      if (badge) {
+        let count = parseInt(badge.innerText || "0");
+        if (count > 1) {
+          badge.innerText = count - 1;
+        } else {
+          badge.style.display = "none";
+        }
+      }
+
+      if (!url || url.trim() === '') return false;
+
+      if (url.startsWith('/board-service/')) {
+        window.location.href = adminGatewayOrigin + url;
+      } else if (url.startsWith('/user-service/')) {
+        window.location.href = adminGatewayOrigin + url;
+      } else if (url.startsWith('/community')) {
+        window.location.href = adminBoardServiceBase + url;
+      } else {
+        window.location.href = adminUserServiceBase + url;
+      }
+    });
+
+    return false;
+  }
+</script>
+
+  <!-- 상단 -->
+  <header class="admin-topbar">
+    <div class="topbar-left">
+      <a th:href="@{/admin/dashboard}" class="topbar-brand">
+        <span class="topbar-brand-icon">
+          <i class="fa-solid fa-shield-halved"></i>
+        </span>
+        <span class="topbar-brand-text">
+          <span class="logo">잡파인더</span>
+          <span class="sub">관리자</span>
+        </span>
+      </a>
+
+      <!-- 메인페이지 링크 별도 -->
+      <a th:href="@{/index}" class="topbar-main-link">
+        메인페이지
+      </a>
+    </div>
+
+    <div class="topbar-right">
+    <div class="admin-noti dropdown" th:if="${notificationList != null}">
+        <button class="admin-noti-btn dropdown-toggle"
+	                type="button"
+	                id="adminNotificationDropdown"
+	                data-toggle="dropdown"
+	                aria-haspopup="true"
+	                aria-expanded="false">
+	            <i class="fa-regular fa-bell"></i>
+	            <span class="admin-noti-badge"
+	                  id="adminNotificationBadge"
+	                  th:if="${unreadNotificationCount > 0}"
+	                  th:text="${unreadNotificationCount}">0</span>
+	        </button>
+	        <div class="dropdown-menu dropdown-menu-right admin-noti-menu"
+	             aria-labelledby="adminNotificationDropdown">
+	            <div class="admin-noti-head">알림</div>
+	            <div th:if="${#lists.isEmpty(notificationList)}" class="admin-noti-empty">
+	                알림이 없습니다.
+	            </div>
+	            <a th:each="noti : ${notificationList}"
+	               href="javascript:void(0)"
+	               th:attr="data-noti-id=${noti.notiId}, data-url=${noti.linkUrl}"
+	               onclick="return adminMoveAfterRead(event, this.dataset.notiId, this.dataset.url)"
+	               th:class="'dropdown-item admin-noti-item ' + (${noti.isRead} == 1 ? 'is-read' : '')">
+	                <div class="admin-noti-title" th:text="${noti.title}">알림 제목</div>
+	                <div class="admin-noti-message" th:text="${noti.message}">알림 내용</div>
+	            </a>
+	        </div>
+	    </div>
+    
+      <div class="profile">
+        <div class="topbar-avatar"
+             th:text="${adminInitial != null ? adminInitial : 'A'}">A</div>
+        <div class="profile-meta">
+          <div class="admin-name"
+               th:text="${adminName != null ? adminName : '관리자'}">관리자</div>
+          <div class="email"
+               th:text="${adminEmail != null ? adminEmail : 'admin@jobkorea.com'}">admin@jobkorea.com</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-body">
+
+    <!-- 사이드바 -->
+    <aside class="admin-sidebar">
+      <ul>
+        <li th:classappend="${activeMenu}=='dashboard' ? ' active' : ''">
+          <a th:href="@{/admin/dashboard(menu='dashboard')}">
+            <i class="fa-solid fa-table-cells"></i><span>대시보드 개요</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='members' ? ' active' : ''">
+          <a th:href="@{/admin/members(menu='members')}">
+            <i class="fa-solid fa-users"></i><span>회원 관리</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='companies' ? ' active' : ''">
+          <a th:href="@{/admin/companies(menu='companies')}">
+            <i class="fa-regular fa-building"></i><span>기업 관리</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='job-posts' ? ' active' : ''">
+          <a th:href="@{/admin/job-posts(menu='job-posts')}">
+            <i class="fa-regular fa-file-lines"></i><span>채용공고 관리</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='posts' ? ' active' : ''">
+          <a th:href="@{/admin/posts(menu='posts')}">
+            <i class="fa-regular fa-newspaper"></i><span>게시글/댓글 관리</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='banners' ? ' active' : ''">
+          <a th:href="@{/admin/banners(menu='banners')}">
+            <i class="fa-solid fa-rectangle-ad"></i><span>배너 관리</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='stats' ? ' active' : ''">
+          <a th:href="@{/admin/stats(menu='stats')}">
+            <i class="fa-solid fa-chart-line"></i><span>통계</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='Statistics' ? ' active' : ''">
+          <a th:href="@{/admin/Statistics(menu='Statistics')}">
+            <i class="fa-solid fa-file-waveform"></i><span>리포트</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='notices' ? ' active' : ''">
+          <a th:href="@{/admin/notices(menu='notices')}">
+            <i class="fa-regular fa-bell"></i><span>공지사항 관리</span>
+          </a>
+        </li>
+        <li th:classappend="${activeMenu}=='reports' ? ' active' : ''">
+          <a th:href="@{/admin/reports(menu='reports')}">
+            <i class="fa-regular fa-flag"></i><span>신고 관리</span>
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- 콘텐츠 -->
+    <div class="admin-content" th:replace="${content}"></div>
+
+  </div>
+</div>

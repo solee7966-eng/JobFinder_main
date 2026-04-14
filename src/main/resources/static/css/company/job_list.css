@@ -1,0 +1,385 @@
+@charset "UTF-8";
+
+
+/* ===== job_list.css ===== */
+
+/* 상단 헤더 */
+.job-head{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:14px;
+}
+.job-title{ font-size:18px; font-weight:900; margin:0; }
+.job-desc{ color:#6b7280; font-size:13px; margin-top:6px; }
+
+.job-add-btn{
+  border-radius:12px;
+  padding:10px 14px;
+  font-weight:800;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+
+
+/* 필터 패널 */
+.job-filter-panel{ padding:14px; }
+
+.job-filters{
+  display:flex; align-items:center; gap:12px;
+  padding:14px;
+  border:1px solid #eee;
+  border-radius:14px;
+  background:#fff;
+}
+.job-search{
+  flex:1;
+  display:flex; align-items:center; gap:10px;
+  background:#f3f4f6;
+  border:1px solid #eee;
+  border-radius:12px;
+  padding:10px 12px;
+}
+.job-search-icon{ color:#9ca3af; }
+
+.job-search input{
+  border:0;
+  outline:0;
+  background:transparent;
+  width:100%;
+  font-size:13px;
+}
+
+.job-select{
+  min-width:140px;
+  border-radius:12px;
+  border:1px solid #eee;
+  background:#fff;
+  height:42px;
+  font-size:13px;
+  padding:0 10px;
+}
+
+
+/* 테이블 */
+.job-table th{
+  font-size:12px;
+  color:#6b7280;
+  font-weight:800;
+  border-top:0;
+}
+.job-table td{
+  font-size:13px;
+  vertical-align:middle;
+}
+
+.job-row{
+  cursor:pointer;
+}
+.job-row.is-selected{
+  background:#f8fafc;
+}
+
+
+/* 상태 뱃지 - 진행중 */
+.badge-darkpill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#0b1524;
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+}
+/* 상태 뱃지 - 마감 */
+.badge-graypill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#eef2f7;
+  color:#111;
+  font-size:12px;
+  font-weight:800;
+}
+/* 상태 뱃지 - 삭제됨 */
+.badge-deleted{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#fee2e2;
+  color:#b91c1c;
+  font-size:12px;
+  font-weight:800;
+}
+/* 상태 뱃지 - 임시저장 */
+.badge-lightpill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#fff7ed;   /* 연한 오렌지/베이지 */
+  color:#9a3412;        /* 진한 오렌지 브라운 */
+  font-size:12px;
+  font-weight:800;
+  border:1px solid #fed7aa; /* 테두리로 구분감 */
+}
+
+/* row action */
+.job-row-action{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  border:1px solid #eee;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+/* 목록 비었을 때 */
+.job-empty-td{
+  text-align:center;
+  color:#6b7280;
+  padding:30px 10px !important;
+}
+
+
+
+
+/* 더보기 아이콘 클릭 시 CSS  */
+.job-actions { position: relative; display: inline-block; }
+.job-row-action { background: transparent; border: 0; cursor: pointer; }
+
+.job-menu {
+  position: absolute;
+  right: 0;
+  top: 24px;
+  min-width: 120px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 6px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+  z-index: 50;
+}
+
+/* ✅ a, button 둘 다 같은 박스로 만들기 */
+.job-menu .job-menu-item{
+  display: flex;              /* 또는 block */
+  align-items: center;
+  width: 100%;                /* ✅ 전체 너비 */
+  box-sizing: border-box;
+  padding: 10px 10px;         /* ✅ 높이 통일 */
+  border-radius: 8px;
+  text-decoration: none;      /* a 밑줄 제거 */
+  border: 0;                  /* button 기본 테두리 제거 */
+  background: transparent;    /* 기본 투명 */
+  cursor: pointer;
+  font: inherit;              /* button 기본 폰트 차이 제거 */
+  color: inherit;
+  text-align: left;           /* button 텍스트 정렬 */
+}
+
+.job-menu .job-menu-item:hover{
+  background: #f3f4f6;        /* ✅ hover 영역 동일 */
+}
+
+/* ✅ form 때문에 레이아웃 틀어지면 이것도 추가 */
+.job-menu form{
+  margin: 0;
+}
+
+.job-menu form .job-menu-item{
+  width: 100%;
+}
+
+
+.text-red{
+  color:#ff0000;   /* 빨간색 */
+  font-weight:600;
+}
+
+
+
+
+
+/* =========================
+   pagination
+   배너 페이지바 형태 + 공고 페이지의 블루 계열
+   ========================= */
+.job-pagination-wrap{
+  display:flex;
+  justify-content:center;
+  margin-top:20px;
+}
+
+.job-pagination{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.job-page-btn,
+.job-page-num{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:36px;
+  height:36px;
+  padding:0 12px;
+  border:1px solid #dbe3f0;
+  background:#ffffff;
+  color:#334155;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:800;
+  text-decoration:none;
+  box-sizing:border-box;
+  transition:all .15s ease;
+}
+
+.job-page-btn:hover,
+.job-page-num:hover{
+  background:#eff6ff;
+  border-color:#93c5fd;
+  color:#1d4ed8;
+  text-decoration:none;
+}
+
+.job-page-num.active{
+  background:#2563eb;
+  color:#ffffff;
+  border-color:#2563eb;
+  box-shadow:0 6px 16px rgba(37, 99, 235, 0.18);
+}
+
+.job-page-btn.is-disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  background:#f8fafc;
+  color:#94a3b8;
+  border-color:#e5e7eb;
+  pointer-events:none;
+}
+
+
+
+
+
+/* 신고처리 CSS */
+.job-row.is-reported{
+  background:#fff7f7;
+}
+
+.badge-report{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#fee2e2;
+  color:#b91c1c;
+  font-size:12px;
+  font-weight:800;
+  border:1px solid #fecaca;
+}
+
+.badge-normal{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#ecfdf5;
+  color:#047857;
+  font-size:12px;
+  font-weight:800;
+  border:1px solid #a7f3d0;
+}
+
+.report-subtext{
+  margin-top:4px;
+  font-size:12px;
+  color:#6b7280;
+  line-height:1.5;
+}
+
+.job-report-box{
+  margin:0 0 18px 0;
+  padding:14px 16px;
+  border:1px solid #fecaca;
+  background:#fff1f2;
+  border-radius:12px;
+}
+
+.job-report-title{
+  font-size:15px;
+  font-weight:800;
+  color:#b91c1c;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+.job-report-meta{
+  font-size:13px;
+  color:#7f1d1d;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.job-report-label{
+  font-size:13px;
+  font-weight:700;
+  color:#991b1b;
+  margin-bottom:4px;
+}
+
+.job-report-content{
+  margin-top:10px;
+  font-size:13px;
+  color:#374151;
+  line-height:1.6;
+}
+
+
+
+
+/* 행 hover 효과 */
+.job-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.job-row:hover {
+  background-color: #f8fafc;
+}
+
+/* 안내 문구 */
+.job-guide {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+
+
+/* 수정 불가 CSS */
+.job-menu-item.is-disabled{
+  color:#9ca3af;
+  background:#f9fafb;
+  cursor:not-allowed;
+}
+
+.job-menu-item.is-disabled:hover{
+  background:#f9fafb;
+}
+
+.job-title-sub{
+  margin-top:4px;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.job-title-sub.warning{
+  color:#b91c1c;
+}

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/layout_company :: layout(~{::title},~{::link},~{::style},~{::script},~{::section})}">
+
+<head>
+  <title>기업 대시보드</title>
+  <link rel="stylesheet" th:href="@{/css/company/job_list.css}">
+  <style type="text/css"></style>
+  
+  <script th:inline="javascript">
+  const contextPath = /*[[@{/}]]*/ "";
+
+  document.addEventListener("click", async (e) => {
+    // 더보기 버튼 클릭 시 해당 행의 메뉴를 열고 닫는다.
+    const moreBtn = e.target.closest(".js-more");
+    if (moreBtn) {
+      e.preventDefault();
+      e.stopPropagation(); // 행 클릭 이벤트가 같이 발생하지 않도록 막는다.
+
+      const wrap = moreBtn.closest(".job-actions");
+      const menu = wrap.querySelector(".job-menu");
+
+      // 현재 메뉴를 제외한 다른 메뉴들은 모두 닫는다.
+      document.querySelectorAll(".job-menu").forEach(m => {
+        if (m !== menu) m.hidden = true;
+      });
+
+      menu.hidden = !menu.hidden;
+      return;
+    }
+
+    // 삭제 버튼 클릭 시 공고 삭제 API를 호출한다.
+    const delBtn = e.target.closest(".js-delete");
+    if (delBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const jobId = delBtn.dataset.jobId;
+      const isHidden = delBtn.dataset.isHidden === "1";
+
+      if (!jobId) return;
+
+      const msg = isHidden
+        ? "이 공고는 신고된 공고입니다. 삭제 처리할까요?"
+        : "해당 공고를 삭제할까요?";
+
+      if (!confirm(msg)) return;
+
+      const res = await fetch(`${contextPath}company/api/jobs/${jobId}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) {
+        alert("삭제 실패");
+        return;
+      }
+
+      // 삭제된 행을 화면에서 제거한다.
+      delBtn.closest("tr")?.remove();
+
+      // 삭제 후 현재 페이지 번호를 유지한 채 목록을 다시 로드한다.
+      const params = new URLSearchParams(window.location.search);
+      const currentShowPageNo = params.get("currentShowPageNo") || "1";
+      location.href = contextPath + "company/job/list?currentShowPageNo=" + encodeURIComponent(currentShowPageNo);
+      return;
+    }
+
+    // 메뉴 내부 클릭은 행 선택 이벤트로 번지지 않도록 막는다.
+    if (e.target.closest(".job-menu")) {
+      e.stopPropagation();
+      return;
+    }
+
+    // 메뉴 바깥을 클릭하면 열려 있는 메뉴를 모두 닫는다.
+    document.querySelectorAll(".job-menu").forEach(m => m.hidden = true);
+  });
+
+  // 공고 행 클릭 시 상세 페이지를 새 팝업창으로 연다.
+  function selectJob(e, jobId) {
+    if (!jobId) return;
+
+    // 액션 버튼 영역을 클릭한 경우 상세 팝업을 열지 않는다.
+    if (e && e.target && e.target.closest(".job-actions")) return;
+
+    const popupUrl = contextPath + "company/job/detail/" + encodeURIComponent(jobId);
+
+    window.open(
+      popupUrl,
+      "jobDetailPopup",
+      "width=1280,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no"
+    );
+  }
+
+  // 문자열 비교를 쉽게 하기 위해 공백 제거 후 소문자로 정규화한다.
+  function normalizeText(value) {
+    return (value || "").toString().trim().toLowerCase();
+  }
+
+  // 현재 검색어와 필터 조건에 맞게 목록 행을 다시 표시한다.
+  function applyJobFilters() {
+    const searchInput = document.getElementById("jobSearchInput");
+    const statusFilter = document.getElementById("jobStatusFilter");
+    const workTypeFilter = document.getElementById("jobWorkTypeFilter");
+    const rows = document.querySelectorAll(".job-table tbody tr.job-row");
+    const visibleCountText = document.getElementById("jobVisibleCountText");
+    const emptyRow = document.getElementById("jobFilterEmptyRow");
+
+    const keyword = normalizeText(searchInput?.value);
+    const selectedStatus = normalizeText(statusFilter?.value);
+    const selectedWorkType = normalizeText(workTypeFilter?.value);
+
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+      // 각 행에 저장된 data 속성값을 기준으로 검색/필터를 수행한다.
+      const title = normalizeText(row.dataset.title);
+      const status = normalizeText(row.dataset.status);
+      const workType = normalizeText(row.dataset.workType);
+
+      // 제목 검색어가 비어 있으면 전체 허용하고, 있으면 포함 여부를 검사한다.
+      const matchesKeyword = !keyword || title.includes(keyword);
+
+      // 상태가 전체이면 모두 허용하고, 아니면 정확히 일치하는 것만 통과시킨다.
+      const matchesStatus = (selectedStatus === "전체") || (status === selectedStatus);
+
+      // 채용형태가 전체이면 모두 허용하고, 아니면 정확히 일치하는 것만 통과시킨다.
+      const matchesWorkType = (selectedWorkType === "전체") || (workType === selectedWorkType);
+
+      const isMatched = matchesKeyword && matchesStatus && matchesWorkType;
+
+      // 조건 일치 여부에 따라 해당 행의 표시 여부를 바꾼다.
+      row.style.display = isMatched ? "" : "none";
+
+      if (isMatched) {
+        visibleCount++;
+      }
+    });
+
+    // 현재 화면에 보이는 공고 수를 상단 건수 텍스트에 반영한다.
+    if (visibleCountText) {
+      visibleCountText.textContent = `(${visibleCount}건)`;
+    }
+
+    // 필터 결과가 0건이면 전용 안내 행을 보여준다.
+    if (emptyRow) {
+      emptyRow.style.display = visibleCount === 0 ? "" : "none";
+    }
+  }
+
+  // 검색창, 셀렉트박스, 초기화 버튼에 필터 이벤트를 연결한다.
+  function initJobFilters() {
+    const searchInput = document.getElementById("jobSearchInput");
+    const statusFilter = document.getElementById("jobStatusFilter");
+    const workTypeFilter = document.getElementById("jobWorkTypeFilter");
+    const resetBtn = document.getElementById("jobFilterResetBtn");
+
+    if (searchInput) {
+      // 제목 검색어를 입력할 때마다 즉시 목록을 필터링한다.
+      searchInput.addEventListener("input", applyJobFilters);
+    }
+
+    if (statusFilter) {
+      // 상태 필터가 변경되면 목록을 다시 필터링한다.
+      statusFilter.addEventListener("change", applyJobFilters);
+    }
+
+    if (workTypeFilter) {
+      // 채용형태 필터가 변경되면 목록을 다시 필터링한다.
+      workTypeFilter.addEventListener("change", applyJobFilters);
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        // 초기화 버튼 클릭 시 검색 조건을 모두 기본값으로 되돌린다.
+        if (searchInput) searchInput.value = "";
+        if (statusFilter) statusFilter.value = "전체";
+        if (workTypeFilter) workTypeFilter.value = "전체";
+
+        applyJobFilters();
+      });
+    }
+
+    // 페이지 최초 진입 시 현재 조건 기준으로 1회 필터를 적용한다.
+    applyJobFilters();
+  }
+
+  // DOM이 준비된 뒤 검색/필터 기능을 초기화한다.
+  document.addEventListener("DOMContentLoaded", initJobFilters);
+  </script>
+  
+</head>
+
+
+
+
+
+<body>
+<section class="dash">
+
+  <!-- 상단 헤더 -->
+  <div class="job-head">
+    <div>
+      <h3 class="job-title">채용 공고 관리</h3>
+      <div class="job-desc">채용 공고를 생성하고 관리하세요</div>
+    </div>
+
+    <a class="btn btn-dark job-add-btn" th:href="@{/company/job/job_write}">
+      <i class="fa-solid fa-plus"></i> 공고 등록
+    </a>
+  </div>
+
+  <!-- 검색/필터 -->
+  <div class="panel job-filter-panel">
+    <div class="job-filters">
+      <div class="job-search">
+        <i class="fa-solid fa-magnifying-glass job-search-icon"></i>
+        <!-- 공고 제목 검색 입력값을 JS에서 잡기 위한 id 추가 -->
+        <input type="text"
+               id="jobSearchInput"
+               class="job-search-input"
+               placeholder="공고 제목으로 검색...">
+      </div>
+  
+      <!-- 공고 상태 필터를 위한 id/value 지정 -->
+      <select class="job-select" id="jobStatusFilter">
+        <option value="전체">전체</option>
+        <option value="게시중">게시중</option>
+        <option value="마감">마감</option>
+        <option value="임시저장">임시저장</option>
+        <option value="대기">대기</option>
+        <option value="삭제됨">삭제됨</option>
+      </select>
+  
+      <!-- 채용 형태 필터를 위한 id/value 지정 -->
+      <select class="job-select" id="jobWorkTypeFilter">
+        <option value="전체">전체</option>
+        <option value="정규직">정규직</option>
+        <option value="계약직">계약직</option>
+        <option value="인턴">인턴</option>
+      </select>
+  
+      <!-- 필터 초기화를 위한 버튼 추가 -->
+      <button type="button" id="jobFilterResetBtn" class="btn btn-light">
+        초기화
+      </button>
+    </div>
+  </div>
+
+  <!-- 공고 목록 -->
+  <div class="panel">
+    <div class="panel-head">
+      <h3>
+        채용 공고 목록
+        <!-- 현재 화면에 표시 중인 건수를 JS로 갱신하기 위한 id 추가 -->
+		<span id="jobVisibleCountText"
+		      th:text="|(${totalCount}건)|">(0건)</span>
+      </h3>
+    </div>
+
+	<div class="job-guide">
+	  ※ 공고를 클릭하면 상세정보 팝업이 열립니다.
+	</div>
+	
+    <div class="table-responsive">
+      <table class="table job-table mb-0">
+        <thead>
+          <tr>
+            <th style="min-width:220px;">공고 제목</th>
+            <th style="min-width:160px;">직무 분야</th>
+            <th style="min-width:90px;">채용 형태</th>
+            <th style="min-width:150px;">마감일</th>
+            <th style="min-width:100px;">상태</th>
+            <th style="min-width:70px;">조회수</th>
+            
+            <th style="min-width:70px;">채용인원</th>
+            <th style="min-width:90px;">스크랩수</th>
+            <th style="min-width:90px;">신고상태</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr th:each="job : ${jobList}"
+			  th:onclick="|selectJob(event, ${job.jobId})|"
+			  class="job-row"
+			  th:attrappend="class=${job.isHidden == 1} ? ' is-reported' : ''"
+			  th:attr="data-title=${job.title},
+			           data-status=${job.status},
+			           data-work-type=${job.workType}">
+
+            <td>
+			  <b th:text="${job.title}">공고제목</b>
+			  <div class="job-title-sub warning" th:if="${job.isHidden == 1}">
+			    신고 접수된 공고입니다. 수정이 제한됩니다.
+			  </div>
+			</td>
+
+            <!-- 분류는 DTO에 categoryId만 있으면 화면용 categoryName을 같이 내려주는 걸 추천 -->
+            <td th:text="${job.categoryName}">백엔드</td>
+
+			<!-- 채용형태 -->
+            <td th:text="${job.workType}">정규직</td>
+            
+            <!-- 마감일 -->
+            <td>
+			  <i class="fa-regular fa-clock"></i>
+			  <span th:text="${job.deadlineAt != null ? #strings.replace(#strings.substring(job.deadlineAt, 0, 16), 'T', ' ') : '-'}">2026-03-16 11:58</span>
+			</td>
+            
+            <!-- 공고 상태(진행중/마감/임시저장) -->
+            <td th:switch="${job.status}">
+			  <span th:case="'게시중'" class="badge-darkpill">게시중</span>
+			  <span th:case="'마감'" class="badge-deleted">마감</span>
+			  <span th:case="'임시저장'" class="badge-lightpill">임시저장</span>
+			  <span th:case="'대기'" class="badge-graypill">대기</span>
+			  <span th:case="'삭제됨'" class="badge-graypill">삭제됨</span>
+			</td>
+			
+			
+            <!-- 수정필요!! 조회수 -->
+            <td>
+              <i class="fa-regular fa-eye"></i>				
+              <span th:text="${job.viewCount != null ? job.viewCount : 0}">0</span>
+            </td>
+			
+			<!-- 수정필요!! 채용인원-->
+            <td>
+              <i class="fa-regular fa-user"></i>			
+              <span th:text="${job.headcount != null ? job.headcount : 0}">0</span>
+            </td>
+            
+			<!-- 스크랩 수 -->
+            <td th:text="${job.scrapCount}"
+			    th:classappend="${job.scrapCount > 0} ? 'text-red' : ''">
+			</td>
+			
+			
+			<td>
+			  <th:block th:if="${job.isHidden == 1}">
+			    <span class="badge-report">신고됨</span>
+			    <div class="report-subtext">
+			      <span th:text="${job.reportReasonName != null ? job.reportReasonName : '사유 미확인'}">
+			        허위 / 과장 정보
+			      </span>
+			      <span th:if="${job.reportStatusText != null}">
+			        · <span th:text="${job.reportStatusText}">처리대기</span>
+			      </span>
+			    </div>
+			  </th:block>
+			
+			  <th:block th:unless="${job.isHidden == 1}">
+			    <span class="badge-normal">정상</span>
+			  </th:block>
+			</td>
+
+
+			<td>
+			  <div class="job-actions" th:attr="data-job-id=${job.jobId}">
+			    <button type="button" class="job-row-action js-more" title="더보기">
+			      <i class="fa-solid fa-ellipsis-vertical"></i>
+			    </button>
+			  
+			    <div class="job-menu" hidden>
+				  <th:block th:if="${job.isHidden != 1}">
+				    <a class="job-menu-item"
+				       th:href="@{/company/job/update(jobId=${job.jobId})}">
+				      수정
+				    </a>
+				  </th:block>
+				
+				  <th:block th:if="${job.isHidden == 1}">
+				    <button type="button"
+				            class="job-menu-item is-disabled"
+				            disabled
+				            title="신고된 공고는 수정할 수 없습니다.">
+				      수정불가
+				    </button>
+				  </th:block>
+				
+				  <button type="button"
+				          class="job-menu-item js-delete"
+				          th:attr="data-job-id=${job.jobId}, data-is-hidden=${job.isHidden}"
+				          onclick="return false;">
+				    삭제
+				  </button>
+				</div>
+			    
+			  </div>
+			</td>
+			
+          </tr>
+
+          <!-- 목록이 비었을 때 -->
+		  <tr th:if="${#lists.isEmpty(jobList)}">
+		    <td colspan="11" class="job-empty-td">
+		      등록된 공고가 없습니다.
+		    </td>
+		  </tr>
+		  
+		  <!-- 검색/필터 결과가 없을 때 JS가 보여줄 행 -->
+		  <tr id="jobFilterEmptyRow" style="display:none;">
+		    <td colspan="11" class="job-empty-td">
+		      검색 조건에 맞는 공고가 없습니다.
+		    </td>
+		  </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- 페이징 처리 페이지바 -->
+	<div class="job-pagination-wrap" th:if="${totalPage > 1}">
+	  <div class="job-pagination">
+	
+	    <!-- 이전 -->
+	    <a th:if="${currentShowPageNo > 1}"
+	       th:href="@{/company/job/list(currentShowPageNo=${currentShowPageNo - 1})}"
+	       class="job-page-btn">
+	      이전
+	    </a>
+	
+	    <!-- 첫 페이지일 때 비활성 느낌 -->
+	    <span th:if="${currentShowPageNo <= 1}"
+	          class="job-page-btn is-disabled">
+	      이전
+	    </span>
+	
+	    <!-- 페이지 번호 -->
+	    <th:block th:each="i : ${#numbers.sequence(1, totalPage)}">
+	      <a th:if="${i != currentShowPageNo}"
+	         th:href="@{/company/job/list(currentShowPageNo=${i})}"
+	         th:text="${i}"
+	         class="job-page-num">
+	      </a>
+	
+	      <span th:if="${i == currentShowPageNo}"
+	            th:text="${i}"
+	            class="job-page-num active">
+	      </span>
+	    </th:block>
+	
+	    <!-- 다음 -->
+	    <a th:if="${currentShowPageNo < totalPage}"
+	       th:href="@{/company/job/list(currentShowPageNo=${currentShowPageNo + 1})}"
+	       class="job-page-btn">
+	      다음
+	    </a>
+	
+	    <!-- 마지막 페이지일 때 비활성 느낌 -->
+	    <span th:if="${currentShowPageNo >= totalPage}"
+	          class="job-page-btn is-disabled">
+	      다음
+	    </span>
+	  </div>
+	</div>
+    
+  </div>
+  
+  
+
+  <!-- 공고 상세 미리보기 (구직자 화면처럼 전체 렌더링) -->
+  
+
+</section>
+</body>
+</html>

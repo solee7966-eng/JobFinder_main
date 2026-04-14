@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.app.jobseeker.model.MypageDAO">
+
+
+    <!-- ======= 회원 기본정보 조회 (프로필용) ======= -->
+    <select id="selectMemberById" parameterType="string"
+            resultType="com.spring.app.member.domain.MemberDTO">
+        SELECT memberid                AS memberId,
+               name                    AS name,
+               birth_date              AS birthDate,
+               email                   AS email,
+               phone                   AS phone,
+               gender                  AS gender,
+               community_company_name  AS communityCompanyName
+        FROM tbl_member
+        WHERE memberid = #{memberId}
+    </select>
+
+
+    <!-- ======= 대표이력서 조회 (사진, 희망지역명, 희망직무명) ======= -->
+    <select id="selectPrimaryResume" parameterType="string"
+            resultType="com.spring.app.jobseeker.domain.ResumeDTO">
+        SELECT R.resume_id       AS resumeId,
+               R.photo_path      AS photoPath,
+               R.fk_region_code  AS regionCode,
+               R.fk_category_id  AS categoryId,
+               R.desired_salary  AS desiredSalary,
+               RG.region_name    AS regionName,
+               JC.category_name  AS categoryName
+        FROM tbl_resume R
+        LEFT JOIN tbl_region RG
+               ON R.fk_region_code = RG.region_code
+        LEFT JOIN tbl_job_category JC
+               ON R.fk_category_id = JC.category_id
+        WHERE R.fk_memberid = #{memberId}
+          AND R.is_primary = 1
+          AND R.is_deleted = 0
+    </select>
+
+
+    <!-- ======= 프로필 수정 (이름, 생년월일, 성별, 이메일, 전화번호) ======= -->
+    <update id="updateProfile" parameterType="com.spring.app.member.domain.MemberDTO">
+        UPDATE tbl_member
+        SET name       = #{name},
+            birth_date = #{birthDate},
+            gender     = #{gender},
+            email      = #{email},
+            phone      = #{phone},
+            updated_at = SYSDATE
+        WHERE memberid = #{memberId}
+    </update>
+
+
+    <!-- ======= 비밀번호 조회 (현재 비밀번호 확인용) ======= -->
+    <select id="selectPassword" parameterType="string" resultType="string">
+        SELECT password
+        FROM tbl_member
+        WHERE memberid = #{memberId}
+    </select>
+
+
+    <!-- ======= 비밀번호 수정 ======= -->
+    <update id="updatePassword">
+        UPDATE tbl_member
+        SET password   = #{encodedPassword},
+            updated_at = SYSDATE
+        WHERE memberid = #{memberId}
+    </update>
+
+
+    <!-- ======= 대시보드 통계 : 지원 내역 총 건수 (제출 상태만) ======= -->
+    <select id="selectTotalApplications" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_job_application
+        WHERE fk_memberid = #{memberId}
+          AND application_status = 0
+    </select>
+
+
+    <!-- ======= 대시보드 통계 : 진행중 지원 건수 (미열람/열람/면접요청)  ======= -->
+    <select id="selectActiveApplications" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_job_application
+        WHERE fk_memberid = #{memberId}
+          AND application_status = 0
+          AND process_status IN (0, 1, 3)
+    </select>
+
+
+    <!-- ======= 대시보드 통계 : 받은 제안 총 건수 ======= -->
+    <select id="selectTotalOffers" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_offer_response R
+        JOIN tbl_offer_submit S ON S.offer_submit_id = R.fk_offer_submit_id
+        WHERE R.fk_memberid = #{memberId}
+          AND R.response_status = 0
+          AND (S.expire_at IS NULL OR S.expire_at >= TRUNC(SYSDATE))
+    </select>
+
+
+    <!-- ======= 대시보드 통계 : 읽지 않은 제안 건수 ======= -->
+    <select id="selectUnreadOffers" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_offer_response R
+        JOIN tbl_offer_submit S ON S.offer_submit_id = R.fk_offer_submit_id
+        WHERE R.fk_memberid = #{memberId}
+          AND R.response_status = 0
+          AND R.viewed_at IS NULL
+          AND (S.expire_at IS NULL OR S.expire_at >= TRUNC(SYSDATE))
+    </select>
+
+
+    <!-- ======= 대시보드 통계 : 면접요청 건수 ======= -->
+    <select id="selectInterviewCount" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_job_application
+        WHERE fk_memberid = #{memberId}
+          AND application_status = 0
+          AND process_status = 3
+    </select>
+
+
+    <!-- ======= 대시보드 통계 : 스크랩한 공고 건수 ======= -->
+    <select id="selectScrappedCount" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_job_scrap
+        WHERE fk_memberid = #{memberId}
+    </select>
+
+
+    <!-- ======= 대시보드 통계 : 팔로우 기업 건수 ======= -->
+    <select id="selectFollowedCompanies" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_company_follow
+        WHERE fk_memberid = #{memberId}
+    </select>
+
+
+    <!-- ======= 대시보드 : 최근 지원 내역 (최근 5건) ======= -->
+    <!--  dashboard.html 키: id, postTitle, companyName, appliedAt, status -->
+    <select id="selectRecentApplications" parameterType="string" resultType="java.util.HashMap">
+        SELECT * FROM (
+            SELECT A.application_id                             AS "id",
+                   P.title                                      AS "postTitle",
+                   C.company_name                               AS "companyName",
+                   TO_CHAR(A.applied_at, 'YYYY.MM.DD')         AS "appliedAt",
+                   CASE A.process_status
+                       WHEN 0 THEN 'UNREAD'
+                       WHEN 1 THEN 'READ'
+                       WHEN 3 THEN 'UNDER_REVIEW'
+                       ELSE 'READ'
+                   END                                          AS "status"
+            FROM tbl_job_application A
+            JOIN tbl_job_posting P ON A.fk_job_id = P.job_id
+            JOIN tbl_company C     ON P.fk_memberid = C.fk_memberid
+            WHERE A.fk_memberid = #{memberId}
+              AND A.application_status = 0
+            ORDER BY A.applied_at DESC
+        ) WHERE ROWNUM &lt;= 5
+    </select>
+
+
+    <!-- ======= 대시보드 : 최근 본 공고 (최근 5건) ======= -->
+    <!--  dashboard.html 키: id, title, companyName, viewedAt -->
+    <select id="selectRecentViewedPosts" parameterType="string" resultType="java.util.HashMap">
+        SELECT * FROM (
+            SELECT V.fk_job_id                                                  AS "id",
+                   P.title                                                      AS "title",
+                   C.company_name                                               AS "companyName",
+                   CASE
+                       WHEN TRUNC(SYSDATE) = TRUNC(V.viewed_at)
+                           AND FLOOR((SYSDATE - V.viewed_at) * 24 * 60) &lt; 1
+                           THEN '방금 전'
+                       WHEN TRUNC(SYSDATE) = TRUNC(V.viewed_at)
+                           AND FLOOR((SYSDATE - V.viewed_at) * 24) &lt; 1
+                           THEN FLOOR((SYSDATE - V.viewed_at) * 24 * 60) || '분 전'
+                       WHEN TRUNC(SYSDATE) = TRUNC(V.viewed_at)
+                           THEN FLOOR((SYSDATE - V.viewed_at) * 24) || '시간 전'
+                       WHEN TRUNC(SYSDATE) - TRUNC(V.viewed_at) = 1
+                           THEN '1일 전'
+                       ELSE FLOOR(TRUNC(SYSDATE) - TRUNC(V.viewed_at)) || '일 전'
+                   END                                                          AS "viewedAt",
+                   CASE
+                       WHEN P.deadline_type = 'always' THEN '상시채용'
+                       WHEN P.deadline_at &lt; TRUNC(SYSDATE) THEN '마감'
+                       WHEN TRUNC(P.deadline_at) = TRUNC(SYSDATE) THEN 'D-Day'
+                       ELSE 'D-' || (TRUNC(P.deadline_at) - TRUNC(SYSDATE))
+                   END                                                          AS "dDay"
+            FROM tbl_viewed_posting V
+            JOIN tbl_job_posting P ON V.fk_job_id = P.job_id
+            JOIN tbl_company C     ON P.fk_memberid = C.fk_memberid
+            WHERE V.fk_memberid = #{memberId}
+            ORDER BY V.viewed_at DESC
+        ) WHERE ROWNUM &lt;= 5
+    </select>
+
+
+    <!-- ======= 커뮤니티 인증 : 직장명 등록/변경 ======= -->
+    <update id="updateCommunityCompanyName">
+        UPDATE tbl_member
+        SET community_company_name = #{companyName},
+            updated_at = SYSDATE
+        WHERE memberid = #{memberId}
+    </update>
+
+    <!-- 캘린더용 이벤트 조회 (지원일 + 마감일 + 제안 응답기한) -->
+    <select id="selectCalendarEvents" parameterType="string" resultType="map">
+        SELECT 'applied' AS "type",
+               C.company_name || ' 지원' AS "title",
+               C.company_name || ' - ' || JP.title AS "fullTitle",
+               TO_CHAR(A.applied_at, 'YYYY-MM-DD') AS "date",
+               C.company_name AS "company",
+               A.fk_job_id AS "jobId",
+               NULL AS "offerSubmitId"
+        FROM tbl_job_application A
+        JOIN tbl_job_posting JP ON A.fk_job_id = JP.job_id
+        JOIN tbl_company C ON JP.fk_memberid = C.fk_memberid
+        WHERE A.fk_memberid = #{memberId}
+          AND A.application_status = 0
+
+        UNION ALL
+
+        SELECT 'deadline' AS "type",
+               C.company_name || ' 마감' AS "title",
+               C.company_name || ' - ' || JP.title AS "fullTitle",
+               TO_CHAR(JP.deadline_at, 'YYYY-MM-DD') AS "date",
+               C.company_name AS "company",
+               A.fk_job_id AS "jobId",
+               NULL AS "offerSubmitId"
+        FROM tbl_job_application A
+        JOIN tbl_job_posting JP ON A.fk_job_id = JP.job_id
+        JOIN tbl_company C ON JP.fk_memberid = C.fk_memberid
+        WHERE A.fk_memberid = #{memberId}
+          AND A.application_status = 0
+          AND JP.deadline_at IS NOT NULL
+          AND JP.deadline_type != 'always'
+
+        UNION ALL
+
+        SELECT 'offer' AS "type",
+               C.company_name || ' 응답기한' AS "title",
+               C.company_name || ' - ' || S.title AS "fullTitle",
+               TO_CHAR(S.expire_at, 'YYYY-MM-DD') AS "date",
+               C.company_name AS "company",
+               S.fk_job_id AS "jobId",
+               S.offer_submit_id AS "offerSubmitId"
+        FROM tbl_offer_response R
+        JOIN tbl_offer_submit S ON S.offer_submit_id = R.fk_offer_submit_id
+        JOIN tbl_job_posting JP ON JP.job_id = S.fk_job_id
+        JOIN tbl_company C ON C.fk_memberid = JP.fk_memberid
+        WHERE R.fk_memberid = #{memberId}
+          AND R.response_status = 0
+          AND S.expire_at IS NOT NULL
+    </select>
+
+</mapper>

@@ -1,0 +1,62 @@
+# 공통 설정 (Public Portfolio Version)
+# 실제 운영 비밀값 및 인프라 상세 설정은 공개용 저장소에서 제거하였습니다.
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration-ms: 60000
+  refresh-token-expiration-ms: 1209600000
+
+solapi:
+  enabled: true
+  api-key: ${SOLAPI_API_KEY}
+  api-secret: ${SOLAPI_API_SECRET}
+  from-phone: ${SOLAPI_FROM_PHONE}
+  base-url: ${SOLAPI_BASE_URL}
+
+spring:
+  application:
+    name: user-service
+
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+
+  messages:
+    basename: messages.validation
+    encoding: UTF-8
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+mybatis:
+  mapper-locations: classpath:mybatis/mapper/**/*.xml
+
+logging:
+  level:
+    '[com.spring.app]': info
+
+server:
+  port: 8001
+  forward-headers-strategy: framework
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  tomcat:
+    max-part-count: 30
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+portone:
+  impCode: ${PORTONE_IMP_CODE}
+  apiKey: ${PORTONE_API_KEY}
+  apiSecret: ${PORTONE_API_SECRET}
